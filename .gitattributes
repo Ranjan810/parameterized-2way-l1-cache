@@ -1,0 +1,4 @@
+workloads/traces/*.trc linguist-generated=true
+docs/** linguist-documentation
+README.md linguist-documentation
+docs/evaluation_report.md linguist-generated=true
