@@ -1,4 +1,3 @@
-// tb_cache_top.sv
 `timescale 1ns / 1ps
 import cache_pkg::*;
 
@@ -6,6 +5,7 @@ module tb_cache_top;
 
     logic clk;
     logic rst_n;
+    
     replace_policy_t policy;
     logic            enable_prefetch;
     
@@ -80,6 +80,7 @@ module tb_cache_top;
             mem_state <= MEM_IDLE;
             mem_ready <= 1'b0;
             mem_latency_ctr <= 0;
+            
             memory_reads <= 0;
             memory_writes <= 0;
             dirty_evictions <= 0;
@@ -87,11 +88,9 @@ module tb_cache_top;
             case (mem_state)
                 MEM_IDLE: begin
                     mem_ready <= 1'b0;
-                   if (mem_req) begin
-                       // $display("[%0t] MEMORY ACCEPT rw=%0b addr=%h", $time, mem_rw, mem_addr);
+                    if (mem_req) begin
                         mem_state <= MEM_BUSY;
                         mem_latency_ctr <= 3; 
-                        
                         if (mem_rw) memory_writes++;
                         else        memory_reads++;
                     end
@@ -160,8 +159,9 @@ module tb_cache_top;
         end
 
         while (!$feof(fd)) begin
-            scan_result = $fscanf(fd, "%s %h\n", trc_rw, trc_addr); 
+            scan_result = $fscanf(fd, "%s %h\n", trc_rw, trc_addr);
             if (scan_result == 2) begin
+                
                 @(posedge clk);
                 cpu_req   <= 1'b1;
                 cpu_rw    <= (trc_rw == "W" || trc_rw == "1") ? 1'b1 : 1'b0;
@@ -171,7 +171,8 @@ module tb_cache_top;
                 @(posedge clk);
                 cpu_req   <= 1'b0;
                 
-                wait (cpu_ready == 1'b1);
+                // Strict edge-sensitive synchronization
+                @(posedge cpu_ready);
                 
                 if (access_hit) begin
                     cache_hits++;
@@ -179,6 +180,7 @@ module tb_cache_top;
                     cache_misses++;
                 end
                 total_accesses++;
+                
                 @(posedge clk);
             end
         end
@@ -211,4 +213,5 @@ module tb_cache_top;
         
         $finish;
     end
+
 endmodule

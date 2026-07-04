@@ -36,9 +36,8 @@ module cache_controller #(
     localparam int IDX_MSB = TAG_LSB - 1;
     localparam int IDX_LSB = OFFSET_WIDTH;
 
-    // --------------------------------------------------------
     // Registered Signals (Input Buffers & FSM State)
-    // --------------------------------------------------------
+    
     logic                      req_valid_reg;
     logic [ADDR_WIDTH-1:0]     req_addr_reg;
     logic                      req_rw_reg;
@@ -52,15 +51,11 @@ module cache_controller #(
     logic [ADDR_WIDTH-1:0]     pref_addr_reg; 
     logic                      is_miss_reg; 
 
-    assign access_hit = cpu_ready & ~is_miss_reg;
-
     cache_state_t state, next_state;
 
-    // --------------------------------------------------------
     // Datapath Multiplexing
-    // --------------------------------------------------------
+
     logic is_pref_state;
-    // UPDATED: Include the new prefetch write-back state
     assign is_pref_state = (state == STATE_PREF_COMPARE)    || 
                            (state == STATE_PREF_WRITE_BACK) ||
                            (state == STATE_PREF_ALLOCATE)   || 
@@ -92,9 +87,8 @@ module cache_controller #(
     assign repl_accessed_way = (state == STATE_ALLOCATE)      ? demand_target_way_reg : 
                                (state == STATE_PREF_ALLOCATE) ? pref_target_way_reg   : hit_way1;
 
-    // --------------------------------------------------------
-    // Sub-Modules
-    // --------------------------------------------------------
+    // Instantiation of Sub-Modules
+
     cache_datapath #(.BLOCK_SIZE(BLOCK_SIZE), .SETS(SETS), .ADDR_WIDTH(ADDR_WIDTH)) i_datapath (
         .clk(clk), .rst_n(rst_n), .index(dp_index_in),
         .we_way0(we_way0), .set_dirty_way0(set_dirty_way0), .clear_dirty_way0(clear_dirty_way0),
@@ -126,9 +120,8 @@ module cache_controller #(
         .prefetch_req_addr(prefetch_req_addr)
     );
 
-    // --------------------------------------------------------
     // Sequential State & Request Latching
-    // --------------------------------------------------------
+
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= STATE_IDLE;
@@ -142,8 +135,13 @@ module cache_controller #(
             pref_target_way_reg   <= 1'b0;
             pref_addr_reg <= '0;
             is_miss_reg   <= 1'b0;
+            
+            cpu_ready  <= 1'b0;
+            access_hit <= 1'b0;
+            cpu_rdata  <= '0;
         end else begin
             state <= next_state;
+            cpu_ready <= 1'b0; 
             
             if (cpu_req) begin
                 req_valid_reg <= 1'b1;
@@ -154,10 +152,17 @@ module cache_controller #(
                 req_idx_reg   <= cpu_addr[IDX_MSB : IDX_LSB];
                 is_miss_reg   <= 1'b0; 
             end else if (state == STATE_COMPARE && cache_hit) begin
-                req_valid_reg <= 1'b0; 
+                req_valid_reg <= 1'b0;
+                
+                cpu_ready  <= 1'b1;
+                access_hit <= ~is_miss_reg;
+                
+                if (req_rw_reg == 1'b0) begin 
+                    cpu_rdata <= hit_way0 ? data_way0 : data_way1;
+                end
             end
             
-            if (state == STATE_COMPARE && req_valid_reg && !cache_hit) begin
+            if (state == STATE_COMPARE && !cache_hit) begin
                 is_miss_reg <= 1'b1;
                 if (!valid_way0)      demand_target_way_reg <= 1'b0;
                 else if (!valid_way1) demand_target_way_reg <= 1'b1;
@@ -176,13 +181,10 @@ module cache_controller #(
         end
     end
 
-    // --------------------------------------------------------
     // Combinational FSM Logic
-    // --------------------------------------------------------
+
     always_comb begin
         next_state = state;
-        cpu_ready = 1'b0;
-        cpu_rdata = '0;
         
         mem_req = 1'b0;
         mem_rw = 1'b0;
@@ -211,12 +213,9 @@ module cache_controller #(
 
             STATE_COMPARE: begin
                 if (cache_hit) begin
-                    cpu_ready = 1'b1;
                     update_lru = 1'b1;
                     
-                    if (req_rw_reg == 1'b0) begin 
-                        cpu_rdata = hit_way0 ? data_way0 : data_way1;
-                    end else begin                
+                    if (req_rw_reg == 1'b1) begin                
                         if (hit_way0) begin
                             we_way0 = 1'b1;
                             set_dirty_way0 = 1'b1;
@@ -281,7 +280,6 @@ module cache_controller #(
                 if (cache_hit) begin
                     next_state = STATE_IDLE;
                 end else begin
-                    // AGGRESSIVE POLICY: Write back dirty lines instead of aborting
                     if ((evict_way ? valid_way1 : valid_way0) && 
                         (evict_way ? dirty_way1 : dirty_way0)) begin
                         next_state = STATE_PREF_WRITE_BACK; 
@@ -294,7 +292,6 @@ module cache_controller #(
             STATE_PREF_WRITE_BACK: begin
                 mem_req = !mem_ready; 
                 mem_rw  = 1'b1; 
-                // Construct memory address using pref_addr_reg index instead of demand index
                 mem_addr = pref_target_way_reg ? {tag_way1, pref_addr_reg[IDX_MSB : IDX_LSB], {OFFSET_WIDTH{1'b0}}} 
                                                : {tag_way0, pref_addr_reg[IDX_MSB : IDX_LSB], {OFFSET_WIDTH{1'b0}}};
                 mem_wdata = pref_target_way_reg ? data_way1 : data_way0;
@@ -332,20 +329,4 @@ module cache_controller #(
             default: next_state = STATE_IDLE;
         endcase
     end
-
-    // --------------------------------------------------------
-    // SURGICAL DEBUG PROBES
-    // --------------------------------------------------------
-    cache_state_t prev_state;
-    
-    //always_ff @(posedge clk) begin
-        //if (rst_n) begin
-           // prev_state <= state;
-            //if (state != prev_state && 
-               //(state == STATE_PREF_WRITE_BACK || state == STATE_WRITE_BACK)) begin
-              //  $display("[%0t] STATE %0d -> %0d | Issuing Writeback", $time, prev_state, state);
-           // end
-       // end
-    //end
-
 endmodule

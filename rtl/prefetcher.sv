@@ -14,7 +14,7 @@ module prefetcher #(
     input  logic                      cpu_req_valid,
     input  logic [ADDR_WIDTH-1:0]     cpu_req_addr,
     
-    input  logic                      prefetch_ack, // NEW: Handshake acknowledge
+    input  logic                      prefetch_ack,
     output logic                      prefetch_req_valid,
     output logic [ADDR_WIDTH-1:0]     prefetch_req_addr
 );
@@ -34,7 +34,6 @@ module prefetcher #(
                 prefetch_req_valid <= 1'b1;
                 prefetch_req_addr  <= next_block_addr;
             end else if (prefetch_ack) begin
-                // Clear the request once the controller accepts it
                 prefetch_req_valid <= 1'b0; 
             end
         end

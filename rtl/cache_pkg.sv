@@ -15,7 +15,7 @@ package cache_pkg;
         STATE_ALLOCATE        = 4'd4,
         STATE_FILL            = 4'd5,
         STATE_PREF_COMPARE    = 4'd6,
-        STATE_PREF_WRITE_BACK = 4'd7, // NEW: Dedicated prefetch write-back state
+        STATE_PREF_WRITE_BACK = 4'd7,
         STATE_PREF_ALLOCATE   = 4'd8,
         STATE_PREF_FILL       = 4'd9
     } cache_state_t;
