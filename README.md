@@ -23,7 +23,7 @@ This repository implements a configurable L1 cache controller together with a tr
 
 ---
 
-# 📂 Repository Structure
+# Repository Structure
 
 ```text
 .
