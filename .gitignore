@@ -22,5 +22,6 @@ ucli.key
 coverage/
 cov/
 urgReport/
-.vscode/settings.json
-.vscode/launch.json
+.vscode/
+.slang/
+*.f

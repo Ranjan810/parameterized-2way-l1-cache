@@ -49,7 +49,6 @@ This repository implements a configurable L1 cache controller together with a tr
 │   └── evaluation_metrics.md
 │
 ├── images/
-│   └── amat_comparison.png
 │
 └── README.md
 ```
@@ -193,13 +192,24 @@ The following architectural metrics were verified for every configuration:
 - Total Memory Traffic
 - Average Memory Access Time (AMAT)
 
+### Measured Performance
+
+In addition to the analytical AMAT used by the Python reference model, the RTL reports a measured average access time obtained directly from simulation.
+
+The measured values capture implementation effects such as memory-port contention and request serialization. While the next-line prefetcher reduces access time for sequential workloads, it increases contention for random and stride workloads, highlighting the trade-off between aggressive prefetching and memory bandwidth utilization.
+
+Detailed measurements are available in **docs/evaluation_report.md**.
 
 ---
 # Results
 
-The RTL implementation was validated against an independent Python architectural golden model across **16 cache configurations**, covering four workloads, two replacement policies, and both prefetch modes. The results demonstrate identical architectural behavior between the RTL and reference model for all evaluated metrics.
+The RTL implementation was validated against an independent Python architectural golden model across **16 cache configurations**, covering four workloads, two replacement policies, and both prefetch modes. The RTL matched the reference model for cache hits, misses, dirty evictions, memory traffic, and analytical AMAT across every evaluated configuration.
 
-> The figure below summarizes the **Average Memory Access Time (AMAT)** for all validated workloads. It compares **LRU** and **FIFO** replacement policies with the prefetcher enabled and disabled, illustrating the performance benefits of hardware prefetching for workloads with strong spatial locality.
+```text
+Analytical AMAT = Hit Time + (Miss Rate × Miss Penalty)
+```
+
+> The figure below summarizes the **Average Memory Access Time (AMAT)** for all validated workloads. It compares **LRU** and **FIFO** replacement policies with the prefetcher enabled and disabled, illustrating the performance impact of hardware prefetching under different memory access patterns.
 
 <p align="center">
     <img src="images/amat_comparison.png"
@@ -209,8 +219,36 @@ The RTL implementation was validated against an independent Python architectural
 
 **Key Observations**
 
-- The hardware prefetcher reduces AMAT from **3.25 → 2.00 cycles** for sequential workloads by exploiting spatial locality.
-- Random and stride workloads show negligible performance improvement because speculative memory accesses provide little cache reuse.
-- LRU and FIFO replacement policies exhibit nearly identical performance across the evaluated workloads, with only a minor difference under the thrashing workload.
-- RTL simulation results match the Python architectural model across all validated metrics, including hit rate, memory traffic, dirty evictions, and AMAT.
+- The hardware prefetcher reduces analytical AMAT from **3.25 → 2.00 cycles** for sequential workloads by exploiting spatial locality.
+- Random and stride workloads show negligible improvement because speculative memory accesses provide little cache reuse.
+- LRU and FIFO replacement policies exhibit nearly identical performance, with only a minor difference observed for the thrashing workload.
+- RTL simulation results match the Python architectural model across all validated metrics, including hit rate, memory traffic, dirty evictions, and analytical AMAT.
+
 ---
+
+### Measured Performance
+
+In addition to the analytical AMAT, the RTL also reports a **Measured Average Access Time**, computed directly from simulation as:
+
+```text
+Measured Average Access Time = Total Simulation Cycles / Total Memory Accesses
+```
+
+Unlike the analytical AMAT, this metric captures implementation-level effects such as controller overhead, request serialization, shared memory-port contention, and speculative prefetch traffic.
+
+> The figure below compares the analytical AMAT with the measured average access time. While the analytical model depends only on cache hit rate and miss penalty, the measured metric reflects the actual execution behavior of the RTL implementation.
+
+<p align="center">
+    <img src="images/amat_formula_vs_measured.png"
+         alt="Analytical AMAT vs Measured Average Access Time"
+         width="850">
+</p>
+
+**Key Observations**
+
+- Sequential workloads benefit from hardware prefetching, reducing both analytical AMAT and measured average access time.
+- For Random and Stride workloads, measured average access time increases significantly with prefetching despite nearly unchanged hit rates, demonstrating the impact of speculative memory traffic on the shared memory interface.
+- The difference between the two metrics highlights that the classical AMAT equation does not capture memory-port contention or controller timing effects.
+- These observations motivate future enhancements such as adaptive or selective prefetching policies that can reduce unnecessary memory traffic while preserving the benefits of hardware prefetching.
+
+For a complete performance evaluation, workload statistics, and validation data, refer to **`docs/evaluation_report.md`**.

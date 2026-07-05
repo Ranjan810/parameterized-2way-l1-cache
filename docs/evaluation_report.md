@@ -69,6 +69,10 @@ The FIFO implementation also demonstrates complete agreement with the Python ref
 
 # Average Memory Access Time (AMAT)
 
+```text
+Analytical AMAT = Hit Time + (Miss Rate × Miss Penalty)
+```
+
 ## LRU Replacement Policy
 
 | Workload | Prefetch OFF | Prefetch ON |
@@ -92,7 +96,49 @@ The FIFO implementation also demonstrates complete agreement with the Python ref
 The next-line prefetcher provides the greatest performance improvement for **sequential workloads**, reducing AMAT from **3.25 cycles to 2.00 cycles** by fetching the next cache line before it is requested. For random and stride workloads, prefetching generates additional memory traffic without improving locality, resulting in little or no AMAT improvement. Thrashing workloads show negligible change because conflict misses dominate cache behavior. 
 
 ---
+# Measured Average Access Time (RTL)
 
+In addition to the analytical AMAT, the RTL reports a measured average access time computed directly from simulation:
+
+```text
+Measured Average Access Time = Total Simulation Cycles / Total Memory Accesses
+```
+
+Unlike the analytical AMAT, this metric captures the effects of memory-port contention, request serialization, controller timing, and speculative prefetch traffic.
+
+| Workload | FIFO OFF | FIFO ON | LRU OFF | LRU ON |
+|----------|---------:|--------:|--------:|-------:|
+| Sequential | 6.26 | 6.02 | 6.26 | 6.02 |
+| Random | 15.26 | 23.59 | 15.26 | 23.59 |
+| Stride | 14.39 | 22.39 | 14.39 | 22.39 |
+| Thrashing | 11.57 | 16.27 | 11.55 | 16.24 |
+
+The measured values include the complete request execution time observed during RTL simulation. Consequently, they are higher than the analytical AMAT because they also include controller overhead, request serialization, and memory-port contention.
+
+---
+# Discussion
+
+Two performance metrics are reported:
+
+- Analytical AMAT
+- Measured Average Access Time
+
+The analytical AMAT is derived from the classical cache equation and depends only on hit rate and miss penalty.
+
+The measured average access time is obtained directly from RTL simulation by dividing the total execution cycles by the number of completed memory accesses.
+
+Unlike the analytical metric, the measured value captures additional implementation effects including:
+
+- controller overhead
+- memory-port contention
+- request serialization
+- speculative prefetch traffic
+
+This distinction becomes particularly evident for the Random and Stride workloads. Although enabling the next-line prefetcher produces almost no improvement in hit rate, the measured access time increases substantially because speculative memory requests occupy the single shared memory interface without contributing useful cache hits.
+
+In contrast, Sequential workloads exhibit both a higher hit rate and a lower measured access time, demonstrating that the prefetcher is effective when spatial locality exists.
+
+---
 # Memory Traffic Analysis
 
 The prefetcher trades increased memory bandwidth for reduced processor stall time.

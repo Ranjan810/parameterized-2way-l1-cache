@@ -205,9 +205,12 @@ module tb_cache_top;
         $display("Total Cycles      : %11d", total_cycles);
         
         if (total_accesses > 0) begin
-            real amat;
-            amat = 2.0 + ((real'(cache_misses) / real'(total_accesses)) * 5.0);
-            $display("AMAT (Cycles)     : %6.2f", amat);
+            real amat_architectural;
+            real avg_access_time_measured;
+            amat_architectural = 2.0 + ((real'(cache_misses) / real'(total_accesses)) * 5.0);
+            avg_access_time_measured = real'(total_cycles) / real'(total_accesses);
+            $display("Architectural AMAT        : %6.2f", amat_architectural);
+            $display("Measured Avg Access Time  : %6.2f", avg_access_time_measured);
         end
         $display("=========================================");
         

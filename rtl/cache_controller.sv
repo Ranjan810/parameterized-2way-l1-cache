@@ -57,6 +57,7 @@ module cache_controller #(
 
     logic is_pref_state;
     assign is_pref_state = (state == STATE_PREF_COMPARE)    || 
+                           (state == STATE_PREF_EVICT)      ||
                            (state == STATE_PREF_WRITE_BACK) ||
                            (state == STATE_PREF_ALLOCATE)   || 
                            (state == STATE_PREF_FILL);
@@ -280,12 +281,16 @@ module cache_controller #(
                 if (cache_hit) begin
                     next_state = STATE_IDLE;
                 end else begin
-                    if ((evict_way ? valid_way1 : valid_way0) && 
-                        (evict_way ? dirty_way1 : dirty_way0)) begin
-                        next_state = STATE_PREF_WRITE_BACK; 
-                    end else begin
-                        next_state = STATE_PREF_ALLOCATE;
-                    end
+                    next_state = STATE_PREF_EVICT;
+                end
+            end
+
+            STATE_PREF_EVICT: begin
+                if ((pref_target_way_reg ? valid_way1 : valid_way0) && 
+                    (pref_target_way_reg ? dirty_way1 : dirty_way0)) begin
+                    next_state = STATE_PREF_WRITE_BACK; 
+                end else begin
+                    next_state = STATE_PREF_ALLOCATE;
                 end
             end
 

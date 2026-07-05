@@ -17,7 +17,8 @@ package cache_pkg;
         STATE_PREF_COMPARE    = 4'd6,
         STATE_PREF_WRITE_BACK = 4'd7,
         STATE_PREF_ALLOCATE   = 4'd8,
-        STATE_PREF_FILL       = 4'd9
+        STATE_PREF_FILL       = 4'd9,
+        STATE_PREF_EVICT      = 4'd10
     } cache_state_t;
 
 endpackage

@@ -1,5 +1,4 @@
 `timescale 1ns / 1ps
-import cache_pkg::*;
 
 module cache_datapath #(
     parameter int BLOCK_SIZE = 16,

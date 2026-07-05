@@ -1,5 +1,4 @@
 `timescale 1ns / 1ps
-import cache_pkg::*;
 
 module prefetcher #(
     parameter int ADDR_WIDTH = 32,
@@ -23,7 +22,7 @@ module prefetcher #(
     logic [ADDR_WIDTH-1:0] next_block_addr;
 
     assign block_aligned_addr = {cpu_req_addr[ADDR_WIDTH-1:OFFSET_WIDTH], {OFFSET_WIDTH{1'b0}}};
-    assign next_block_addr = block_aligned_addr + BLOCK_SIZE;
+    assign next_block_addr = block_aligned_addr + logic'(BLOCK_SIZE);
 
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
